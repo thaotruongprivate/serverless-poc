@@ -1,0 +1,55 @@
+service: solarmiete
+frameworkVersion: '3'
+
+provider:
+  name: aws
+  region: eu-central-1
+  runtime: nodejs18.x
+  iam:
+    role:
+      name: lambdaFunctions
+      statements:
+        - Effect: Allow
+          Action: 'events:PutEvents'
+          Resource: '*'
+        - Effect: Allow
+          Action: 'secretsmanager:GetSecretValue'
+          Resource: '*'
+
+functions:
+  createEvent:
+    handler: functions/createEvent.handler
+    events:
+      - httpApi:
+          path: /create_event
+          method: POST
+  contractCreated:
+    handler: functions/contractCreated.handler
+    events:
+      - eventBridge:
+          pattern:
+            source:
+              - 'lambda'
+            detail-type:
+              - 'contract_created'
+  createContract:
+    handler: functions/createContract.handler
+    timeout: 120
+    events:
+      - eventBridge:
+          pattern:
+            source:
+              - 'salesforce'
+            detail-type:
+              - 'opportunity_change'
+            detail:
+              object:
+                - 'opportunity'
+              changed_property:
+                - 'stagename'
+              new_value:
+                - 'Ready for QA'
+              related_objects:
+                synced_quote:
+                  record_type_id:
+                    - 'xxxxyyyyzzzz'
